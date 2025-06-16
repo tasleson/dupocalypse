@@ -1198,7 +1198,7 @@ dependencies = [
 [[package]]
 name = "thinp"
 version = "1.1.0"
-source = "git+https://github.com/jthornber/thin-provisioning-tools.git?branch=main#b745ab35057bdd0a4f1406938916621dcf2b7ef6"
+source = "git+https://github.com/jthornber/thin-provisioning-tools.git?tag=v1.1.0#b745ab35057bdd0a4f1406938916621dcf2b7ef6"
 dependencies = [
  "anyhow",
  "atty",

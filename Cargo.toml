@@ -28,7 +28,7 @@ roaring = "0.10.10"
 serde = { version = "1", features = ["derive"] }
 serde_yaml_ng = "0.10"
 size-display = "0.1.4"
-thinp = { git = "https://github.com/jthornber/thin-provisioning-tools.git", branch = "main" }
+thinp = { git = "https://github.com/jthornber/thin-provisioning-tools.git", tag = "v1.1.0" }
 # thinp = { path = "../thinp-for-dm-archive/" }
 udev = "0.9.1"
 walkdir = "2"

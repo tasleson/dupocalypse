@@ -282,6 +282,36 @@ blk-archive unpack -a my-archive --stream 7cd3daf2d6062d40 /dev/my-vg/restore-th
 speed            : 12.35G/s
 ```
 
+## Integrate blk-archive with other tools
+
+**Scenario:**
+You want to integrate blk-archive into other tools or work flows
+
+**Goal:**
+Enable automated, non-interactive usage.
+
+**Solution with blk-archive:**
+blk-archive supports JSON output to facilitate integration with other tools.
+Use the `-j` option to enable JSON-formatted output.
+
+**Example command:**
+```bash
+blk-archive -j pack -a my-archive /usr/bin/ls
+```
+
+**Example JSON output:**
+```json
+{
+  "stats": {
+    "data_written": 145312,
+    "fill_size": 0,
+    "mapped_size": 145312
+  },
+  "stream_id": "2c7c9e40ebd7b26e"
+}
+
+```
+
 ## Deleting a stream from an archive
 
 **Scenario:**

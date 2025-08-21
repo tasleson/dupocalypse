@@ -101,13 +101,19 @@ mod hash_tests {
         // even though they represent the same numbers in different endianness.
         // This proves that the hash function treats the input as a pure byte stream
         // and is not affected by the system's endianness.
-        assert_ne!(hash_le, hash_be, "Hash should treat input as raw bytes, regardless of endianness");
+        assert_ne!(
+            hash_le, hash_be,
+            "Hash should treat input as raw bytes, regardless of endianness"
+        );
 
         // Additional verification: hash the same byte sequence on both platforms
         let consistent_data = [1, 2, 3, 4, 5, 6, 7, 8];
         let hash1 = hash_256(&consistent_data);
         let hash2 = hash_256(&consistent_data);
-        assert_eq!(hash1, hash2, "Same byte sequence should produce identical hashes");
+        assert_eq!(
+            hash1, hash2,
+            "Same byte sequence should produce identical hashes"
+        );
     }
 
     #[test]
@@ -125,13 +131,19 @@ mod hash_tests {
         // even though they represent the same numbers in different endianness.
         // This proves that the hash function treats the input as a pure byte stream
         // and is not affected by the system's endianness.
-        assert_ne!(hash_le, hash_be, "Hash should treat input as raw bytes, regardless of endianness");
+        assert_ne!(
+            hash_le, hash_be,
+            "Hash should treat input as raw bytes, regardless of endianness"
+        );
 
         // Additional verification: hash the same byte sequence on both platforms
         let consistent_data = [1, 2, 3, 4, 5, 6, 7, 8];
         let hash1 = hash_64(&consistent_data);
         let hash2 = hash_64(&consistent_data);
-        assert_eq!(hash1, hash2, "Same byte sequence should produce identical hashes");
+        assert_eq!(
+            hash1, hash2,
+            "Same byte sequence should produce identical hashes"
+        );
 
         // Verify that the hash output is consistent regardless of platform endianness
         let hash = hash_64(&consistent_data);
@@ -153,13 +165,19 @@ mod hash_tests {
         // even though they represent the same numbers in different endianness.
         // This proves that the hash function treats the input as a pure byte stream
         // and is not affected by the system's endianness.
-        assert_ne!(hash_le, hash_be, "Hash should treat input as raw bytes, regardless of endianness");
+        assert_ne!(
+            hash_le, hash_be,
+            "Hash should treat input as raw bytes, regardless of endianness"
+        );
 
         // Additional verification: hash the same byte sequence on both platforms
         let consistent_data = [1, 2, 3, 4];
         let hash1 = hash_32(&consistent_data);
         let hash2 = hash_32(&consistent_data);
-        assert_eq!(hash1, hash2, "Same byte sequence should produce identical hashes");
+        assert_eq!(
+            hash1, hash2,
+            "Same byte sequence should produce identical hashes"
+        );
 
         // Verify that the hash output is consistent regardless of platform endianness
         let hash = hash_32(&consistent_data);

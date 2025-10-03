@@ -3,11 +3,13 @@ use std::process::exit;
 use std::sync::Arc;
 use thinp::report::*;
 
+use dupocalypse::archive::flight_check;
 use dupocalypse::create;
 use dupocalypse::dump_stream;
 use dupocalypse::list;
 use dupocalypse::output::Output;
 use dupocalypse::pack;
+use dupocalypse::recovery;
 use dupocalypse::unpack;
 
 //-----------------------
@@ -41,6 +43,25 @@ where
 fn main_() -> Result<()> {
     let cli = cli::build_cli();
     let matches = cli.get_matches();
+
+    // Check for and apply recovery checkpoint before processing any command
+    // This handles interrupted operations by truncating files to last known-good state
+    if let Some((subcommand_name, sub_matches)) = matches.subcommand() {
+        if let Some(archive_path) = sub_matches.get_one::<String>("ARCHIVE") {
+            let checkpoint_path =
+                std::path::Path::new(archive_path).join(recovery::check_point_file());
+            if recovery::RecoveryCheckpoint::exists(&checkpoint_path) {
+                let checkpoint = recovery::RecoveryCheckpoint::read(&checkpoint_path)?;
+                checkpoint.apply(archive_path)?;
+            }
+
+            // Do a preflight check before proceeding to ensure the archive is in a hopefully
+            // good state (skip for create command as archive doesn't exist yet)
+            if subcommand_name != "create" {
+                flight_check(archive_path)?;
+            }
+        }
+    }
 
     match matches.subcommand() {
         Some(("create", sub_matches)) => {

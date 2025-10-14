@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Context, Result};
+use byteorder::{LittleEndian, ReadBytesExt};
 use dupocalypse::slab::file::regenerate_index;
 use dupocalypse::slab::offsets::validate_slab_offsets_file;
-use byteorder::{LittleEndian, ReadBytesExt};
 use std::fs::OpenOptions;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::PathBuf;

@@ -350,7 +350,7 @@ impl SlabFile {
         assert_eq!(actual_csum, expected_csum);
 
         if self.compressed {
-            let decompress_buff_size_mb: usize = env::var("BLK_ARCHIVE_DECOMPRESS_BUFF_SIZE_MB")
+            let decompress_buff_size_mb: usize = env::var("DUPOCALYPSE_DECOMPRESS_BUFF_SIZE_MB")
                 .unwrap_or(String::from("4"))
                 .parse::<usize>()
                 .unwrap_or(4);

@@ -3,7 +3,7 @@ use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
 use thinp::file_utils::create_sized_file;
 
-use crate::common::blk_archive::*;
+use crate::common::dupocalypse::*;
 use crate::common::block_visitor::*;
 use crate::common::random::Pattern;
 use crate::common::test_dir::*;
@@ -12,9 +12,9 @@ use crate::common::test_dir::*;
 
 pub const BLOCK_SIZE: usize = 32768;
 
-pub fn create_archive(td: &mut TestDir, data_compression: bool) -> Result<BlkArchive> {
+pub fn create_archive(td: &mut TestDir, data_compression: bool) -> Result<Dupocalypse> {
     let archive_dir = td.mk_path("test_arch");
-    BlkArchive::new_with(&archive_dir, 4096, data_compression)
+    Dupocalypse::new_with(&archive_dir, 4096, data_compression)
 }
 
 pub fn create_input_file(

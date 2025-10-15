@@ -47,7 +47,7 @@ loop3=$(losetup -f --show /block3.img)
 cd "$START_DIR" || exit 1
 cargo test || exit 1
 
-# Run the dmtest-python tests for blk-archive
+# Run the dmtest-python tests for dupocalypse
 # Unable to run rolling linux test as we don't have enough disk space in the CI VMs.
 cd "$START_DIR" || exit 1
 # setup the configuration file for dmtest-python
@@ -59,10 +59,10 @@ echo "disable_by_id_check = true" >> config.toml
 
 export DMTEST_RESULT_SET=unit-test
 ./dmtest health || exit 1
-./dmtest run blk-archive/unit/combinations
+./dmtest run dupocalypse/unit/combinations
 rc=$?
 if [ $rc -ne 0 ]; then
-    ./dmtest log /blk-archive/unit/combinations
+    ./dmtest log /dupocalypse/unit/combinations
     exit 1
 fi
 exit 0

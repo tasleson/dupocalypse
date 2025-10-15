@@ -16,7 +16,7 @@ use crate::slab::file::*;
 /// Creating a new compressed slab file:
 /// ```
 /// # use anyhow::Result;
-/// # use blk_archive::slab::*;
+/// # use dupocalypse::slab::*;
 /// # fn example() -> Result<()> {
 /// let slab_file = SlabFileBuilder::create("data.slab")
 ///     .compressed(true)
@@ -30,7 +30,7 @@ use crate::slab::file::*;
 /// Opening an existing slab file for reading:
 /// ```
 /// # use anyhow::Result;
-/// # use blk_archive::slab::*;
+/// # use dupocalypse::slab::*;
 /// # fn example() -> Result<()> {
 /// let slab_file = SlabFileBuilder::open("data.slab")
 ///     .cache_nr_entries(100)

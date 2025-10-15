@@ -153,40 +153,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "blk-archive"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "atty",
- "blake2",
- "byteorder",
- "chrono",
- "clap",
- "devicemapper 0.34.4 (git+https://github.com/stratis-storage/devicemapper-rs?branch=master)",
- "duct",
- "gearhash",
- "generic-array",
- "libc",
- "linked-hash-map",
- "lru",
- "nix",
- "nom",
- "num_enum",
- "rand",
- "rand_chacha",
- "roaring",
- "serde",
- "serde_json",
- "serde_yaml_ng",
- "size-display",
- "tempfile",
- "thinp",
- "udev 0.9.3",
- "walkdir",
- "zstd",
-]
-
-[[package]]
 name = "block-buffer"
 version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -438,6 +404,40 @@ dependencies = [
  "once_cell",
  "os_pipe",
  "shared_child",
+]
+
+[[package]]
+name = "dupocalypse"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "atty",
+ "blake2",
+ "byteorder",
+ "chrono",
+ "clap",
+ "devicemapper 0.34.4 (git+https://github.com/stratis-storage/devicemapper-rs?branch=master)",
+ "duct",
+ "gearhash",
+ "generic-array",
+ "libc",
+ "linked-hash-map",
+ "lru",
+ "nix",
+ "nom",
+ "num_enum",
+ "rand",
+ "rand_chacha",
+ "roaring",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "size-display",
+ "tempfile",
+ "thinp",
+ "udev 0.9.3",
+ "walkdir",
+ "zstd",
 ]
 
 [[package]]

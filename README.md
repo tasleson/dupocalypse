@@ -1,43 +1,58 @@
-# Introduction
 
-blk-archive is a tool for archiving block devices.
+# 🧟‍♂️ Dupocalypse
 
-Archived data is deduplicated, compressed and stored in a directory
-within a file system.
+```
+       __                             __
+  ____/ /_  ______  ____  _________ _/ /_  ______  ________
+ / __  / / / / __ \/ __ \/ ___/ __ `/ / / / / __ \/ ___/ _ \
+/ /_/ / /_/ / /_/ / /_/ / /__/ /_/ / / /_/ / /_/ (__  )  __/
+\__,_/\__,_/ .___/\____/\___/\__,_/_/\__, / .___/____/\___/
+          /_/                       /____/_/
 
-blk-archive is not a complete backup solution.  But it may well make an
-excellent first step in a backup process.  For instance you may wish to
-sync the archive directory to cloud storage, or write it to tape.
+When storage gets tight, make every byte count.
+    ... or ...
+Duplicate data meets its doomsday :-)
+```
 
-It works particularly well with the thin provisioning device-mapper
-target:
 
-- Thin snapshots can be used to archive live data.
-- it avoids reading unprovisioned areas of thin devices.
-- it can calculate deltas between thin devices to minimise how much data is read and deduped.
-- restoring to a thin device tries to maximise data sharing within the thin pool
-  (a big win if you're restoring snapshots).
+## Introduction
 
-# Status
+Welcome to **dupocalypse**, your last line of defense against the rising tide of duplicate data.
+**This is a spin of blk-archive.  Think of it as blk-archive, but with a different direction on features.**  It has a different name to hopefully prevent confusion.
 
-This project is in a alpha state.
+This Rust-powered utility hunts down redundant blocks across files and block devices, then mercilessly deduplicates and compresses them into a tidy archive directory.
 
-See doc/TODO.md for more info.
+It’s not a full-blown backup system — more like a prepper bunker for your data.
+You’ll still want to sync your archive to the cloud, a tape robot, or a USB drive buried in your backyard.
 
-# Documentation
+It works especially well with the **device-mapper thin provisioning** target:
 
-At the moment the best introduction to the tool is the *Use Cases*
-document in the doc directory.
+- **Snapshot survival** — archive live data without downtime (assuming your're using snapshots)
+- **Hole awareness** — skips unprovisioned regions of thin devices.
+- **Delta wizardry** — computes differences between thin devices so you only process changed blocks.
+- **Efficient resurrection** — restores to thin devices while maximizing data sharing (great for snapshots).
 
-The files in the doc/ directory are in *markdown* format so can be read
-in any text viewer.  However, they were edited using the Obsidian tool
-(https://obsidian.md), and you will get a prettier viewing experience if you
-also use this tool.
+## Status
 
-# Building
+**ALPHA** — a.k.a. *bring your hard hat*.
 
-blk-archive is written in Rust.  You will need to install a recent
-tool chain.  I recommend using *rustup*.
+Expect dragons, bugs, and maybe even lost data.
+Check out [`doc/TODO.md`](doc/TODO.md) for what’s still on fire.
+
+## Documentation
+
+For now, the best way to understand dupocalypse is to read the **Use Cases** document in the `doc/` directory.
+
+All files are Markdown (so they work fine in `less`, `cat`, or your editor of choice),
+but they were written in [Obsidian](https://obsidian.md), which gives you a smoother, more immersive experience —
+perfect for contemplating your deduplication destiny.
+
+## Building
+
+dupocalypse is written in **Rust**, the language of fearless concurrency and mildly alarming compiler messages.
+
+You’ll need a modern Rust toolchain — install it the easy way with [rustup](https://rustup.rs), or if
+you're using a modern enough distro, you'll likely be good to go anway.
 
 ### Build dependencies
 Some of the rust libraries have build dependencies which need to be satisfied.

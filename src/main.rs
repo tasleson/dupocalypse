@@ -5,12 +5,12 @@ use std::process::exit;
 use std::sync::Arc;
 use thinp::report::*;
 
-use blk_archive::create;
-use blk_archive::dump_stream;
-use blk_archive::list;
-use blk_archive::output::Output;
-use blk_archive::pack;
-use blk_archive::unpack;
+use dupocalypse::create;
+use dupocalypse::dump_stream;
+use dupocalypse::list;
+use dupocalypse::output::Output;
+use dupocalypse::pack;
+use dupocalypse::unpack;
 
 //-----------------------
 
@@ -31,7 +31,7 @@ fn main_() -> Result<()> {
         .short('a')
         .value_name("ARCHIVE")
         .num_args(1)
-        .env("BLK_ARCHIVE_DIR")
+        .env("DUPOCALYPSE_DIR")
         .required(true);
 
     let stream_arg = Arg::new("STREAM")

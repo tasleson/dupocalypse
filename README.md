@@ -1,16 +1,6 @@
-
-# 🧟‍♂️ Dupocalypse
+<img width="1536" height="1024" alt="dupocalypse" src="https://github.com/user-attachments/assets/b05b30c4-be40-4694-88cf-da52d1ce4003" />
 
 ```
-       __                             __
-  ____/ /_  ______  ____  _________ _/ /_  ______  ________
- / __  / / / / __ \/ __ \/ ___/ __ `/ / / / / __ \/ ___/ _ \
-/ /_/ / /_/ / /_/ / /_/ / /__/ /_/ / / /_/ / /_/ (__  )  __/
-\__,_/\__,_/ .___/\____/\___/\__,_/_/\__, / .___/____/\___/
-          /_/                       /____/_/
-
-When storage gets tight, make every byte count.
-    ... or ...
 Duplicate data meets its doomsday :-)
 ```
 
@@ -18,7 +8,7 @@ Duplicate data meets its doomsday :-)
 ## Introduction
 
 Welcome to **dupocalypse**, your last line of defense against the rising tide of duplicate data.
-**This is a spin of blk-archive.  Think of it as blk-archive, but with a different direction on features.**  It has a different name to hopefully prevent confusion.
+**This is a spin of [blk-archive](https://github.com/device-mapper-utils/blk-archive).  Think of it as blk-archive, but with a different direction on features.**  It has a different name to hopefully prevent confusion too.
 
 This Rust-powered utility hunts down redundant blocks across files and block devices, then mercilessly deduplicates and compresses them into a tidy archive directory.
 
@@ -36,7 +26,7 @@ It works especially well with the **device-mapper thin provisioning** target:
 
 **ALPHA** — a.k.a. *bring your hard hat*.
 
-Expect dragons, bugs, and maybe even lost data.
+Expect dragons, bugs, maybe lost data, and it might even compile!
 Check out [`doc/TODO.md`](doc/TODO.md) for what’s still on fire.
 
 ## Documentation
@@ -52,7 +42,7 @@ perfect for contemplating your deduplication destiny.
 dupocalypse is written in **Rust**, the language of fearless concurrency and mildly alarming compiler messages.
 
 You’ll need a modern Rust toolchain — install it the easy way with [rustup](https://rustup.rs), or if
-you're using a modern enough distro, you'll likely be good to go anway.
+you're using a modern enough distro, you'll likely be good to go.
 
 ### Build dependencies
 Some of the rust libraries have build dependencies which need to be satisfied.
@@ -64,5 +54,7 @@ Build via the standard *cargo* tool.
 
 > cargo build --release
 
-Do not forget the --release flag, debug builds can be an order of
-magnitude slower.  The executable will be in target/release/.
+Do not forget the --release flag, debug builds can be an order of magnitude slower,
+ideal for those who enjoy a more contemplative approach to computing.
+
+The executable will be in `target/release/`.

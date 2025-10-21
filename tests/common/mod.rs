@@ -2,8 +2,8 @@
 // https://github.com/rust-lang/rust/issues/46379
 #![allow(dead_code)]
 
-pub mod dupocalypse;
 pub mod block_visitor;
+pub mod dupocalypse;
 pub mod fixture;
 pub mod process;
 pub mod random;

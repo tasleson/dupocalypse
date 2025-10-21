@@ -3,11 +3,11 @@ use rand::Rng;
 
 mod common;
 
-use dupocalypse::archive;
 use common::dupocalypse::PackResponse;
 use common::fixture::{create_archive, create_input_file, BLOCK_SIZE};
 use common::random::Pattern;
 use common::test_dir::*;
+use dupocalypse::archive;
 
 //-----------------------------------------
 

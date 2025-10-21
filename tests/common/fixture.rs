@@ -3,8 +3,8 @@ use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
 use thinp::file_utils::create_sized_file;
 
-use crate::common::dupocalypse::*;
 use crate::common::block_visitor::*;
+use crate::common::dupocalypse::*;
 use crate::common::random::Pattern;
 use crate::common::test_dir::*;
 

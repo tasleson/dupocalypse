@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use crate::archive::SLAB_SIZE_TARGET;
-use crate::slab::file::*;
 use crate::slab::storage::*;
+use crate::slab::*;
 
 /// Error returned when attempting to write a slab at a file boundary
 ///
@@ -160,8 +160,7 @@ pub fn current_active_data_slab<P: AsRef<std::path::Path>>(base_path: P) -> Resu
 }
 
 fn count_slabs_in_file(file_path: &Path) -> Result<u32> {
-    let slab_file = SlabFile::open_for_read(file_path, 1)?;
-    Ok(slab_file.get_nr_slabs() as u32)
+    number_of_slabs(file_path)
 }
 
 //------------------------------------------------
@@ -196,7 +195,7 @@ impl MultiFile {
             }
 
             // Lets just re-generate and move on...
-            let mut slab_offsets = regenerate_index(file_path, None)?;
+            let mut slab_offsets = regenerate_index(file_path)?;
             slab_offsets.write_offset_file(true)?;
             drop(slab_offsets);
 
@@ -286,15 +285,20 @@ impl MultiFile {
         })
     }
 
-    pub fn open_for_read<P: AsRef<Path>>(archive_dir: P, cache_nr_entries: usize) -> Result<Self> {
-        // Discover existing files
-        let (num_files, total_slabs) = discover_existing_files(&archive_dir)?;
-        if num_files == 0 {
+    pub fn total_number_slabs<P: AsRef<Path>>(archive_dir: P) -> Result<(u32, u32)> {
+        let numbers = discover_existing_files(&archive_dir)?;
+        if numbers.0 == 0 {
             return Err(anyhow::anyhow!(
                 "No existing slab files found in {:?}",
                 archive_dir.as_ref()
             ));
         }
+        Ok(numbers)
+    }
+
+    pub fn open_for_read<P: AsRef<Path>>(archive_dir: P, cache_nr_entries: usize) -> Result<Self> {
+        // Discover existing files
+        let (_, total_slabs) = MultiFile::total_number_slabs(&archive_dir)?;
 
         Ok(Self {
             base_path: archive_dir.as_ref().to_path_buf(),

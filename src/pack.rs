@@ -689,7 +689,6 @@ fn get_delta_args(matches: &ArgMatches) -> Result<Option<(String, PathBuf)>> {
 
 /// Resolve `path_str`, ensure it refers to a readable regular file or block device,
 /// and return the canonical absolute path (symlinks resolved).
-///
 /// Linux-only (uses `FileTypeExt::is_block_device`).
 pub fn canonicalize_readable_regular_or_block(path_str: String) -> Result<PathBuf> {
     let input = Path::new(&path_str);
@@ -702,13 +701,7 @@ pub fn canonicalize_readable_regular_or_block(path_str: String) -> Result<PathBu
     let ft = meta.file_type();
 
     // 3) Must be a regular file OR a block device
-    let is_ok_type = ft.is_file() || {
-        #[cfg(target_os = "linux")]
-        {
-            ft.is_block_device()
-        }
-    };
-    if !is_ok_type {
+    if !ft.is_file() && !ft.is_block_device() {
         return Err(anyhow!("not a regular file or block device: {:?}", canon));
     }
 
@@ -717,7 +710,7 @@ pub fn canonicalize_readable_regular_or_block(path_str: String) -> Result<PathBu
         .read(true)
         .open(&canon)
         .with_context(|| format!("opening for read {:?}", canon))?;
-    // (File handle drops here; open succeeded ⇒ readable)
+    // (File handle drops here; open succeeded = readable)
 
     Ok(canon)
 }
@@ -750,9 +743,9 @@ pub fn run(matches: &ArgMatches, output: Arc<Output>) -> Result<()> {
     ));
 
     // Categorize input files into delta, thin, and thick lists
-    let mut delta_files = Vec::new();
-    let mut thin_files = Vec::new();
-    let mut thick_files = Vec::new();
+    let mut delta_block_devs = Vec::new();
+    let mut thin_block_devs = Vec::new();
+    let mut thick_input = Vec::new();
 
     for input_file_str in input_files {
         let result = canonicalize_readable_regular_or_block(input_file_str.to_string());
@@ -774,30 +767,29 @@ pub fn run(matches: &ArgMatches, output: Arc<Output>) -> Result<()> {
         }
 
         if delta_args.is_some() {
-            delta_files.push(input_file);
+            delta_block_devs.push(input_file);
         } else if is_thin_device(&input_file).with_context(|| {
             format!(
                 "Failed to check if {} is a thin device",
                 input_file.display()
             )
         })? {
-            thin_files.push(input_file);
+            thin_block_devs.push(input_file);
         } else {
-            let meta = std::fs::metadata(input_file.clone())?;
-            if meta.is_file() {
-                thick_files.push(input_file);
-            }
+            // As we know it was either a file or a block device, and it isn't a delta or thin
+            // simply add.
+            thick_input.push(input_file);
         }
     }
 
     let mut final_archive: Option<Data<MultiFile>> = None;
 
     // Process delta devices with one packer
-    if !delta_files.is_empty() {
+    if !delta_block_devs.is_empty() {
         if let Some((delta_stream, delta_device)) = &delta_args {
             final_archive = process_file_list(
                 &archive_dir,
-                &delta_files,
+                &delta_block_devs,
                 output.clone(),
                 &config,
                 hashes_file.clone(),
@@ -819,17 +811,17 @@ pub fn run(matches: &ArgMatches, output: Arc<Output>) -> Result<()> {
             .with_context(|| {
                 format!(
                     "Failed to process delta device list ({} files)",
-                    delta_files.len()
+                    delta_block_devs.len()
                 )
             })?;
         }
     }
 
     // Process thin devices with one packer
-    if !thin_files.is_empty() {
+    if !thin_block_devs.is_empty() {
         final_archive = process_file_list(
             &archive_dir,
-            &thin_files,
+            &thin_block_devs,
             output.clone(),
             &config,
             hashes_file.clone(),
@@ -841,16 +833,16 @@ pub fn run(matches: &ArgMatches, output: Arc<Output>) -> Result<()> {
         .with_context(|| {
             format!(
                 "Failed to process thin device list ({} files)",
-                thin_files.len()
+                thin_block_devs.len()
             )
         })?;
     }
 
     // Process thick devices/files with one packer
-    if !thick_files.is_empty() {
+    if !thick_input.is_empty() {
         final_archive = process_file_list(
             &archive_dir,
-            &thick_files,
+            &thick_input,
             output.clone(),
             &config,
             hashes_file.clone(),
@@ -862,7 +854,7 @@ pub fn run(matches: &ArgMatches, output: Arc<Output>) -> Result<()> {
         .with_context(|| {
             format!(
                 "Failed to process thick device/file list ({} files)",
-                thick_files.len()
+                thick_input.len()
             )
         })?;
     }

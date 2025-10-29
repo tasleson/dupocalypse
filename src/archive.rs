@@ -5,7 +5,6 @@ use crate::hash::*;
 use crate::hash_index::*;
 use crate::iovec::*;
 use crate::paths;
-use crate::paths::*;
 use crate::recovery::*;
 use crate::slab::MultiFile;
 use crate::slab::*;
@@ -399,9 +398,15 @@ impl<'a, S: SlabStorage> Data<'a, S> {
     /// Unlike sync_checkpoint(), this does NOT complete the current data slab
     /// or sync the data file, since we're in the middle of a write_slab() operation.
     pub fn sync_for_file_boundary(&mut self) -> Result<()> {
-        // Sync hashes file is not needed as
-        // Multifile::write_slab was already sync'd when we find that the slab
-        // we just wrote will be the last slab in the slab file.
+        // Sync hashes file before creating checkpoint
+        // Note: While MultiFile::write_slab syncs the data file when writing the last slab,
+        // it does NOT sync the hashes file, which is a separate SlabFile. We must sync it
+        // here to ensure the checkpoint captures the correct file size.
+        let mut hashes_file = self.hashes_file.lock().unwrap();
+        hashes_file
+            .sync_all()
+            .with_context(|| "Failed to sync hashes file before boundary crossing")?;
+        drop(hashes_file);
 
         // Write cuckoo filter
         let index_path = paths::index_path(&self.archive_dir);
@@ -574,6 +579,62 @@ impl<'a> Data<'a, MultiFile> {
     }
 }
 
+fn archive_data_slab_count<P: AsRef<std::path::Path>>(archive_path: P) -> Result<(u32, bool)> {
+    let mut regen = false;
+    let count = match MultiFile::total_number_slabs(&archive_path) {
+        Ok(len) => len.1,
+        Err(_) => {
+            // We got an error going through all the slab index files, try to fix
+            MultiFile::fix_data_file_slab_indexes(&archive_path).with_context(|| {
+                format!(
+                    "Failed to fix data file slab indexes at {:?}",
+                    archive_path.as_ref()
+                )
+            })?;
+            regen = true;
+            // This should work without errors!
+            MultiFile::total_number_slabs(&archive_path)?.1
+        }
+    };
+    Ok((count, regen))
+}
+
+fn archive_hashes_slab_count<P: AsRef<std::path::Path>>(archive_path: P) -> Result<(u32, bool)> {
+    let mut regen = false;
+    let hashes_path = paths::hashes_path(&archive_path);
+    let count = match file::number_of_slabs(&hashes_path) {
+        Ok(len) => len,
+        Err(_) => {
+            // hashes index file has an error, fix
+            let mut hash_index =
+                crate::slab::regenerate_index(&hashes_path).with_context(|| {
+                    format!("Failed to regenerate hashes index for {:?}", hashes_path)
+                })?;
+            regen = true;
+            hash_index.write_offset_file(true)?;
+            file::number_of_slabs(&hashes_path)?
+        }
+    };
+    Ok((count, regen))
+}
+
+fn apply_check_point<P: AsRef<std::path::Path>>(archive_path: P) -> Result<()> {
+    let checkpoint_path = archive_path
+        .as_ref()
+        .join(crate::recovery::check_point_file());
+    if RecoveryCheckpoint::exists(&checkpoint_path) {
+        let checkpoint = RecoveryCheckpoint::read(&checkpoint_path)
+            .with_context(|| format!("Read error on checkpoint from {:?}", checkpoint_path))?;
+        checkpoint.apply(archive_path.as_ref()).with_context(|| {
+            format!(
+                "Error applying recovery checkpoint at {:?}",
+                archive_path.as_ref()
+            )
+        })?;
+    }
+    Ok(())
+}
+
 /// Performs a flight check on data and hashes slab files
 ///
 /// Verifies that both files have the same number of slabs. If they don't match,
@@ -589,179 +650,65 @@ impl<'a> Data<'a, MultiFile> {
 /// * `Ok(())` if files have matching slab counts
 /// * `Err` if slab counts don't match after regeneration
 pub fn flight_check<P: AsRef<std::path::Path>>(archive_path: P) -> Result<()> {
-    use std::path::Path;
-
     // Make sure the archive directory actually exists
+
     if !RecoveryCheckpoint::exists(&archive_path) {
         return Err(anyhow!(format!(
-            "archive {:?} does not exist!",
+            "archive and/or checkpoint file for {:?} does not exist!",
             archive_path.as_ref()
         )));
     }
 
-    let checkpoint_path = archive_path
-        .as_ref()
-        .join(crate::recovery::check_point_file());
-    if RecoveryCheckpoint::exists(&checkpoint_path) {
-        let checkpoint = RecoveryCheckpoint::read(&checkpoint_path).with_context(|| {
-            format!(
-                "flight_check: read error on checkpoint from {:?}",
-                checkpoint_path
-            )
-        })?;
-        checkpoint.apply(archive_path.as_ref()).with_context(|| {
-            format!(
-                "flight_check: error applying recovery checkpoint at {:?}",
-                archive_path.as_ref()
-            )
-        })?;
-    }
+    // Apply the checkpoint, this is a no-op if we exited cleanly
+    apply_check_point(&archive_path)?;
 
-    let data_file = current_active_data_slab(&archive_path).with_context(|| {
-        format!(
-            "flight_check: Failed to find active data slab {:?}",
-            archive_path.as_ref()
-        )
-    })?;
-
-    let hashes_file = hashes_path(&archive_path);
-    let data_path = data_file.as_ref();
-    let hashes_path = hashes_file.as_ref();
-
-    // Helper to get offsets file path
-    fn offsets_path(p: &Path) -> std::path::PathBuf {
-        let mut offsets_path = std::path::PathBuf::new();
-        offsets_path.push(p);
-        offsets_path.set_extension("offsets");
-        offsets_path
-    }
-
-    // Helper to get slab offsets or regenerate if needed
-    fn get_or_regenerate_slab_offsets<'a>(
-        slab_path: &Path,
-        offsets_path: &Path,
-    ) -> Result<(crate::slab::offsets::SlabOffsets<'a>, bool)> {
-        let offsets = if offsets_path.exists() {
-            match crate::slab::offsets::SlabOffsets::open(offsets_path, false) {
-                Ok(offsets) => offsets,
-                Err(_) => {
-                    // Failed to read, regenerate
-                    crate::slab::regenerate_index(slab_path, None)?
-                }
-            }
-        } else {
-            // No offsets file, regenerate
-            crate::slab::regenerate_index(slab_path, None)?
-        };
-
-        Ok((offsets, false))
-    }
-
-    let data_offsets_path = offsets_path(data_path);
-    let hashes_offsets_path = offsets_path(hashes_path);
-
-    // Get initial slab counts
-    let (mut data_offsets, data_regen) =
-        get_or_regenerate_slab_offsets(data_path, &data_offsets_path)?;
-    let (mut hashes_offsets, hashes_regen) =
-        get_or_regenerate_slab_offsets(hashes_path, &hashes_offsets_path)?;
-
-    if data_regen {
-        data_offsets.write_offset_file(true).with_context(|| {
-            format!(
-                "flight_check:error writing regen data offsets for {:?}",
-                data_path
-            )
-        })?;
-    }
-
-    if hashes_regen {
-        hashes_offsets.write_offset_file(true).with_context(|| {
-            format!(
-                "flight_check:error writing regen hashes offsets for {:?}",
-                hashes_path
-            )
-        })?;
-    }
+    // Retrieve the slab counts from data slabs and hashes slab
+    let (data_slab_count, data_regen) = archive_data_slab_count(&archive_path)?;
+    let (hash_slab_count, hash_regen) = archive_hashes_slab_count(&archive_path)?;
 
     // Check if counts match bettween the data and hashes slab
-    if data_offsets.len() != hashes_offsets.len() {
-        // Close the offsets
-        drop(data_offsets);
-        drop(hashes_offsets);
+    if data_slab_count != hash_slab_count {
+        eprintln!(
+            "WARNING: missmatch between data slab counts {} and hashes slab counts {} fixing ...",
+            data_slab_count, hash_slab_count,
+        );
 
-        // Try regenerating both to be sure, regenerating index files is safe.
-        let mut data_offsets =
-            crate::slab::regenerate_index(data_path, None).with_context(|| {
-                format!(
-                    "flight_check: failed to regenerate data index for {:?}",
-                    data_path
-                )
-            })?;
-        let mut hashes_offsets =
-            crate::slab::regenerate_index(hashes_path, None).with_context(|| {
-                format!(
-                    "flignt_check: Failed to regenerate hashes index for {:?}",
-                    hashes_path
-                )
-            })?;
-
-        let hashes_count = hashes_offsets.len();
-
-        data_offsets.write_offset_file(true).with_context(|| {
-            format!(
-                "flight_check: Failed to write data offsets file for {:?}",
-                data_path
-            )
-        })?;
-        hashes_offsets.write_offset_file(true).with_context(|| {
-            format!(
-                "flight_Check: Failed to write hashes offsets file for {:?}",
-                hashes_path
-            )
-        })?;
-
-        // We need to compare the count of all slabs across all the data files to the hashes file
-        let data_mf = MultiFile::open_for_read(&archive_path, 0).with_context(|| {
-            format!(
-                "flight_check: failed to open multi-file for read at {:?}",
-                archive_path.as_ref()
-            )
-        })?;
-        let data_count = data_mf.get_nr_slabs();
-        drop(data_mf);
-
-        if data_count as usize != hashes_count {
-            // if we get here, we need to walk all the data slab files and regen all of the index
-            // files.  When that is done we will fetch the number of data slabs and if it doesn't
-            // match the hash slab count, the archive is in a bad state.
+        if !data_regen {
             MultiFile::fix_data_file_slab_indexes(&archive_path).with_context(|| {
                 format!(
                     "flight_check: failed to fix data file slab indexes at {:?}",
                     archive_path.as_ref()
                 )
             })?;
+        }
 
-            let data_mf = MultiFile::open_for_read(&archive_path, 0).with_context(|| {
-                format!(
-                    "flight_check: Failed to open multi-file for read at {:?}",
-                    archive_path.as_ref()
-                )
-            })?;
-            let data_count = data_mf.get_nr_slabs();
+        if !hash_regen {
+            // hashes index file has an error, fix
+            let hashes_path = paths::hashes_path(&archive_path);
+            let mut hash_index =
+                crate::slab::regenerate_index(&hashes_path).with_context(|| {
+                    format!(
+                        "flight_check: Failed to regenerate hashes index for {:?}",
+                        hashes_path
+                    )
+                })?;
+            hash_index.write_offset_file(true)?;
+        }
 
-            if data_count as usize != hashes_count {
-                return Err(anyhow::anyhow!(
-                "flight_check: slab count mismatch after offsets for all slab files regenerated: data file has {} slabs, hashes file has {} slabs",
-                data_count,
-                hashes_count
+        // get counts and check again
+        let (data_slab_count, _data_regen) = archive_data_slab_count(&archive_path)?;
+        let (hash_slab_count, _hash_regen) = archive_hashes_slab_count(&archive_path)?;
+        if data_slab_count != hash_slab_count {
+            return Err(anyhow!(
+                "Crital error: During startup we found that the number of slabs in the \
+                 data file(s) {} doesn't match the number of slabs in the hash file {}",
+                data_slab_count,
+                hash_slab_count
             ));
-            }
         }
     }
 
     // Lastly, remove any in-progress streams file
-
     if let Err(e) = crate::paths::cleanup_temp_streams(
         archive_path
             .as_ref()
@@ -820,7 +767,7 @@ mod tests {
 
         let data_file = MultiFile::open_for_write(archive_path, 10, slab_capacity)?;
         let hashes_file = Arc::new(Mutex::new(
-            SlabFileBuilder::open(hashes_path(&archive_path))
+            SlabFileBuilder::open(paths::hashes_path(&archive_path))
                 .write(true)
                 .queue_depth(16)
                 .build()
@@ -931,7 +878,7 @@ mod tests {
 
         let data_file = MultiFile::open_for_write(archive_path, 10, slab_capacity)?;
         let hashes_file = Arc::new(Mutex::new(
-            SlabFileBuilder::open(hashes_path(&archive_path))
+            SlabFileBuilder::open(paths::hashes_path(&archive_path))
                 .write(true)
                 .queue_depth(16)
                 .build()

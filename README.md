@@ -8,7 +8,7 @@ Duplicate data meets its doomsday :-)
 ## Introduction
 
 Welcome to **dupocalypse**, your last line of defense against the rising tide of duplicate data.
-**This is a spin of [blk-archive](https://github.com/device-mapper-utils/blk-archive).  Think of it as blk-archive, but with a different direction on features.**  It has a different name to hopefully prevent confusion too.
+**This is a spin of [blk-archive](https://github.com/device-mapper-utils/blk-archive).  Think of it as blk-archive, but with experimental features.**  It has a different name to hopefully prevent confusion too.
 
 This Rust-powered utility hunts down redundant blocks across files and block devices, then mercilessly deduplicates and compresses them into a tidy archive directory.
 
